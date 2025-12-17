@@ -124,7 +124,7 @@
     <div class="search-box" style="display:flex; align-items:center; gap:10px;">
       <div style="position:relative; flex-grow:1;">
         <span class="search-icon">🔍</span>
-        <input type="text" class="search-input" placeholder="ページを検索..." onkeyup="handleSearch(this.value)" style="width:100%; box-sizing:border-box;">
+        <input type="text" id="search-input" class="search-input" placeholder="ページを検索... (タグクリックで絞り込み)" onkeyup="handleSearch(this.value)" style="width:100%; box-sizing:border-box;">
       </div>
       <button class="btn-secondary" onclick="triggerImport()" title="Markdownファイルをインポート" style="white-space:nowrap;">📥 Import</button>
     </div>
@@ -133,22 +133,51 @@
         // Page List
         const listHtml = `
     <div id="page-list" class="fade-in">
-      ${state.pages.map(page => `
-        <div class="nav-item" onclick="window.location.hash = '#view/${page.id}'">
-          <div style="flex-grow:1">
+      ${renderPageListItems(state.pages)}
+    </div>
+  `;
+
+        container.innerHTML = `<h1>ナレッジベース</h1>${searchHtml}${listHtml}`;
+    }
+
+    function renderPageListItems(pages) {
+        if (pages.length === 0) {
+            return '<p style="text-align:center; color:var(--text-sub)">ページが見つかりません。新規作成してみましょう！</p>';
+        }
+
+        return pages.map(page => `
+    <div class="nav-item-wrapper" style="display:flex; align-items:flex-start; margin-bottom:0.5rem; background:white; border-radius:var(--radius-md); border:1px solid transparent; transition:all 0.2s;">
+        <div class="nav-item" onclick="window.location.hash = '#view/${page.id}'" style="flex-grow:1; margin:0; border:none; background:none;">
+          <div>
             <div style="font-weight:600; color:var(--text-main)">${page.title}</div>
             <div style="font-size:0.8rem; color:var(--text-sub)">
               ${new Date(page.updated_at).toLocaleDateString()} 更新者: ${page.author_email}
             </div>
           </div>
-          <span class="tag">${page.tags || '一般'}</span>
         </div>
-      `).join('')}
-      ${state.pages.length === 0 ? '<p style="text-align:center; color:var(--text-sub)">ページが見つかりません。新規作成してみましょう！</p>' : ''}
+        <div style="padding:0.75rem;">
+          ${renderClickableTags(page.tags)}
+        </div>
     </div>
-  `;
+  `).join('');
+    }
 
-        container.innerHTML = `<h1>ナレッジベース</h1>${searchHtml}${listHtml}`;
+    function renderClickableTags(tagsStr) {
+        if (!tagsStr) return '<span class="tag clickable" onclick="filterByTag(\'一般\')">一般</span>';
+
+        return tagsStr.split(',')
+            .map(t => t.trim())
+            .filter(t => t)
+            .map(tag => `<span class="tag clickable" onclick="filterByTag('${tag}')">${tag}</span>`)
+            .join(' ');
+    }
+
+    function filterByTag(tag) {
+        const input = document.getElementById('search-input');
+        if (input) {
+            input.value = tag;
+            handleSearch(tag);
+        }
     }
 
     async function handleSearch(query) {
@@ -157,22 +186,12 @@
         try {
             const results = await api.searchPages(query);
             state.pages = results;
-            // Re-render list part only ideally, but full re-render is fine for now
-            const listContainer = document.getElementById('page-list');
-            if (!listContainer) return;
 
-            // Quick re-implementation of list rendering
-            listContainer.innerHTML = results.map(page => `
-        <div class="nav-item" onclick="window.location.hash = '#view/${page.id}'">
-          <div style="flex-grow:1">
-            <div style="font-weight:600; color:var(--text-main)">${page.title}</div>
-            <div style="font-size:0.8rem; color:var(--text-sub)">
-              ${new Date(page.updated_at).toLocaleDateString()} 更新者: ${page.author_email}
-            </div>
-          </div>
-          <span class="tag">${page.tags || '一般'}</span>
-        </div>
-    `).join('') || '<p style="text-align:center; color:var(--text-sub)">結果なし</p>';
+            // Use the same helper for consistent rendering
+            const listContainer = document.getElementById('page-list');
+            if (listContainer) {
+                listContainer.innerHTML = renderPageListItems(results);
+            }
 
         } catch (e) {
             console.error(e);
