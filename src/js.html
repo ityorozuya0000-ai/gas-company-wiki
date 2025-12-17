@@ -316,6 +316,14 @@
             contentHtml = page.content;
         }
 
+        // Anti-XSS Sanitization
+        if (window.DOMPurify) {
+            contentHtml = DOMPurify.sanitize(contentHtml, {
+                ADD_TAGS: ['video'], // Allow video tags
+                ADD_ATTR: ['src', 'controls', 'style'] // Allow controls/styles for video
+            });
+        }
+
         container.innerHTML = `
       <div class="fade-in">
         <div class="page-meta">
