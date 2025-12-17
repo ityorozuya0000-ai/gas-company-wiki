@@ -324,9 +324,9 @@
            ${page.tags ? `<span class="tag">${page.tags}</span>` : ''}
         </div>
         
-        <div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">
+        <div class="page-header">
             <h1 style="margin:0;">${page.title}</h1>
-            <div class="page-actions" style="margin:0; padding:0; border:none; gap:0.5rem;">
+            <div class="page-actions">
                <button class="btn-secondary" onclick="window.location.hash = '#home'">一覧へ</button>
                <button class="btn-secondary" onclick="exportMarkdown('${page.id}')">Export</button>
                <button class="btn-secondary" style="background:var(--primary); color:white; border:none;" onclick="window.location.hash = '#edit/${page.id}'">編集</button>
@@ -463,16 +463,16 @@
                         const range = state.editorInstance.getSelection(true);
                         if (file.type.startsWith('video')) {
                             // Video tag for HTML
-                            state.editorInstance.clipboard.dangerouslyPasteHTML(range.index, `<video src="${result.downloadUrl}" controls style="max-width:100%"></video>`);
+                            state.editorInstance.clipboard.dangerouslyPasteHTML(range.index, `<video src="${result.url}" controls style="max-width:100%"></video>`);
                         } else {
                             // Image
-                            state.editorInstance.insertEmbed(range.index, 'image', result.downloadUrl); // Logic might need proxy for Drive, but try direct download link
+                            state.editorInstance.insertEmbed(range.index, 'image', result.url); // Use direct view URL
                         }
                     } else {
                         const textarea = document.getElementById('markdown-editor');
                         const insertText = file.type.startsWith('video')
-                            ? `\n<video src="${result.downloadUrl}" controls></video>\n`
-                            : `\n![${file.name}](${result.downloadUrl})\n`;
+                            ? `\n<video src="${result.url}" controls></video>\n`
+                            : `\n![${file.name}](${result.url})\n`;
                         textarea.value += insertText;
                     }
                 } catch (err) {
