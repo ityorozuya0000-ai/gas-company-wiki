@@ -14,7 +14,9 @@
 <body>
   <!-- Mobile Header -->
   <div class="mobile-header">
-    <div class="app-title" style="margin:0; font-size:1.2rem;">社内Wiki</div>
+    <div class="app-title" style="margin:0; font-size:1.2rem;">
+      <?= appName ?>
+    </div>
     <button onclick="document.querySelector('.sidebar').style.display='block'"
       style="border:none; background:none;">☰</button>
   </div>
@@ -22,7 +24,9 @@
   <div class="app-container">
     <!-- Sidebar -->
     <aside class="sidebar">
-      <div class="app-title" onclick="window.location.hash='#home'">社内Wiki</div>
+      <div class="app-title" onclick="window.location.hash='#home'">
+        <?= appName ?>
+      </div>
 
       <button class="new-page-btn" onclick="window.location.hash='#edit/new'">+ 新規ページ作成</button>
 

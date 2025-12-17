@@ -11,6 +11,8 @@ function doGet(e) {
   }
 
   const template = HtmlService.createTemplateFromFile('index');
+  template.appName = Config.APP_NAME; // Pass App Name to template
+  
   return template.evaluate()
     .setTitle(Config.APP_NAME)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
