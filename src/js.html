@@ -168,7 +168,11 @@
         return tagsStr.split(',')
             .map(t => t.trim())
             .filter(t => t)
-            .map(tag => `<span class="tag clickable" onclick="filterByTag('${tag}')">${tag}</span>`)
+            .map(tag => {
+                // Escape single quotes for onclick attribute
+                const safeTag = tag.replace(/'/g, "\\'");
+                return `<span class="tag clickable" onclick="filterByTag('${safeTag}')">${tag}</span>`;
+            })
             .join(' ');
     }
 
@@ -176,25 +180,43 @@
         const input = document.getElementById('search-input');
         if (input) {
             input.value = tag;
-            handleSearch(tag);
+            // Immediate search with loader
+            handleSearch(tag, true);
         }
     }
 
-    async function handleSearch(query) {
-        // Simple client-side filtering if we have all pages, or server-side
-        // let's do server side for scalability demo
+    let searchTimeout = null;
+    async function handleSearch(query, immediate = false) {
+        // Debounce for keyup (300ms) unless immediate (tag click)
+        if (!immediate) {
+            if (searchTimeout) clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => performSearch(query), 300);
+        } else {
+            performSearch(query);
+        }
+    }
+
+    async function performSearch(query) {
+        // UI Feedback - visual indicator in the list area
+        const listContainer = document.getElementById('page-list');
+        if (!listContainer) return;
+
+        // If purely loading locally, it might be fast, but server roundtrip takes time.
+        // We can use a small opacity change or mini-spinner.
+        // For tag click (immediate), let's use global loader or just opacity text.
+        listContainer.style.opacity = '0.5';
+
         try {
             const results = await api.searchPages(query);
             state.pages = results;
 
-            // Use the same helper for consistent rendering
-            const listContainer = document.getElementById('page-list');
-            if (listContainer) {
-                listContainer.innerHTML = renderPageListItems(results);
-            }
-
+            // Update list
+            listContainer.innerHTML = renderPageListItems(results);
         } catch (e) {
             console.error(e);
+            listContainer.innerHTML = '<p style="color:red; text-align:center;">検索中にエラーが発生しました</p>';
+        } finally {
+            listContainer.style.opacity = '1';
         }
     }
 
