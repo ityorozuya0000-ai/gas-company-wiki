@@ -2,9 +2,17 @@
  * Webアプリのエントリーポイント
  */
 function doGet(e) {
+  // 設定が未完了の場合はセットアップ画面を表示
+  if (!Config.isValid()) {
+    return HtmlService.createTemplateFromFile('setup')
+      .evaluate()
+      .setTitle('Setup - Company Wiki')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
   const template = HtmlService.createTemplateFromFile('index');
   return template.evaluate()
-    .setTitle(CONFIG.APP_NAME)
+    .setTitle(Config.APP_NAME)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -15,6 +23,26 @@ function doGet(e) {
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
+
+// --- API Functions ---
+
+/**
+ * 設定を保存する (Setup画面用)
+ */
+function apiSaveConfig(form) {
+  Config.set(CONFIG_KEYS.SHEET_ID, form.sheetId);
+  Config.set(CONFIG_KEYS.FOLDER_ID, form.folderId);
+  Config.set(CONFIG_KEYS.APP_NAME, form.appName || 'Company Wiki');
+  
+  // Setup logic: Initialize DB if possible
+  try {
+    setup(); 
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
 
 // --- API Functions ---
 

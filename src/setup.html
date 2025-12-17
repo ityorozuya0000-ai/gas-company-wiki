@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <base target="_top">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            color: #1f2937;
+        }
+
+        .card {
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        h1 {
+            margin-top: 0;
+            color: #4F46E5;
+        }
+
+        p {
+            color: #6b7280;
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .input-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 100%;
+            background-color: #4F46E5;
+            color: white;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background-color: #4338CA;
+        }
+
+        button:disabled {
+            background-color: #9CA3AF;
+            cursor: not-allowed;
+        }
+
+        .error {
+            color: #ef4444;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <h1>Welcome to Wiki Setup</h1>
+        <p>Enter the IDs of your Google Sheet and Drive Folder to connect the application.</p>
+
+        <form id="setupForm" onsubmit="handleSubmit(event)">
+            <div class="input-group">
+                <label>Google Sheet ID</label>
+                <input type="text" name="sheetId" required placeholder="e.g. 1a2B3... or URL">
+            </div>
+
+            <div class="input-group">
+                <label>Drive Assets Folder ID</label>
+                <input type="text" name="folderId" required placeholder="e.g. 1xY9z... or URL">
+            </div>
+
+            <div class="input-group">
+                <label>Application Name</label>
+                <input type="text" name="appName" value="Company Wiki" placeholder="Checking...">
+            </div>
+
+            <button type="submit" id="submitBtn">Save & Initialize</button>
+            <div id="errorMsg" class="error"></div>
+        </form>
+    </div>
+
+    <script>
+        function handleSubmit(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            const err = document.getElementById('errorMsg');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+            err.style.display = 'none';
+
+            const formData = {
+                sheetId: cleanId(document.getElementsByName('sheetId')[0].value),
+                folderId: cleanId(document.getElementsByName('folderId')[0].value),
+                appName: document.getElementsByName('appName')[0].value
+            };
+
+            google.script.run
+                .withSuccessHandler(res => {
+                    if (res.success) {
+                        alert('Setup Complete! Reloading...');
+                        window.top.location.reload();
+                    } else {
+                        showError('Error: ' + res.error);
+                    }
+                })
+                .withFailureHandler(e => showError(e))
+                .apiSaveConfig(formData);
+        }
+
+        function showError(msg) {
+            const err = document.getElementById('errorMsg');
+            const btn = document.getElementById('submitBtn');
+            err.textContent = msg;
+            err.style.display = 'block';
+            btn.disabled = false;
+            btn.textContent = 'Save & Initialize';
+        }
+
+        function cleanId(input) {
+            // Extract ID from URL if user pasted full URL
+            if (input.includes('spreadsheets/d/')) {
+                const match = input.match(/\/d\/([a-zA-Z0-9-_]+)/);
+                return match ? match[1] : input;
+            }
+            if (input.includes('folders/')) {
+                const match = input.match(/\/folders\/([a-zA-Z0-9-_]+)/);
+                return match ? match[1] : input;
+            }
+            return input;
+        }
+    </script>
+</body>
+
+</html>
