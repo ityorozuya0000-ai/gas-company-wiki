@@ -109,7 +109,38 @@
             <button type="submit" id="submitBtn">設定を保存して初期化</button>
             <div id="errorMsg" class="error"></div>
         </form>
+
+        <div id="successMsg" style="display:none; text-align:center; animation: fadeIn 0.5s;">
+            <h2 style="color:#10B981; margin-bottom:1rem;">セットアップ完了！</h2>
+            <p>初期化に成功しました。アプリを起動します...</p>
+            <div class="spinner"
+                style="margin: 1rem auto; border: 4px solid #f3f3f3; border-top: 4px solid #10B981; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite;">
+            </div>
+            <p><small>画面が切り替わらない場合は<a href="javascript:window.top.location.reload()">ここをクリック</a></small></p>
+        </div>
     </div>
+
+    <style>
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
 
     <script>
         function handleSubmit(e) {
@@ -118,6 +149,7 @@
             const err = document.getElementById('errorMsg');
             btn.disabled = true;
             btn.textContent = '保存中...';
+            btn.style.opacity = '0.7';
             err.style.display = 'none';
 
             const formData = {
@@ -129,8 +161,15 @@
             google.script.run
                 .withSuccessHandler(res => {
                     if (res.success) {
-                        alert('セットアップ完了！リロードします...');
-                        window.top.location.reload();
+                        // Show success UI instead of alert
+                        document.getElementById('setupForm').style.display = 'none';
+                        document.querySelector('p').style.display = 'none'; // Hide description
+                        document.getElementById('successMsg').style.display = 'block';
+
+                        // Reload after a short delay
+                        setTimeout(() => {
+                            window.top.location.reload();
+                        }, 1500);
                     } else {
                         showError('エラー: ' + res.error);
                     }
@@ -146,6 +185,7 @@
             err.style.display = 'block';
             btn.disabled = false;
             btn.textContent = '設定を保存して初期化';
+            btn.style.opacity = '1';
         }
 
         function cleanId(input) {

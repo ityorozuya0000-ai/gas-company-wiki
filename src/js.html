@@ -121,9 +121,12 @@
 
         // Search Bar
         const searchHtml = `
-    <div class="search-box">
-      <span class="search-icon">🔍</span>
-      <input type="text" class="search-input" placeholder="ページを検索..." onkeyup="handleSearch(this.value)">
+    <div class="search-box" style="display:flex; gap:10px;">
+      <div style="position:relative; flex-grow:1;">
+        <span class="search-icon">🔍</span>
+        <input type="text" class="search-input" placeholder="ページを検索..." onkeyup="handleSearch(this.value)">
+      </div>
+      <button class="btn-secondary" onclick="triggerImport()" title="Markdownファイルをインポート">📥 Import</button>
     </div>
   `;
 
