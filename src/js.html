@@ -121,12 +121,12 @@
 
         // Search Bar
         const searchHtml = `
-    <div class="search-box" style="display:flex; gap:10px;">
+    <div class="search-box" style="display:flex; align-items:center; gap:10px;">
       <div style="position:relative; flex-grow:1;">
         <span class="search-icon">🔍</span>
-        <input type="text" class="search-input" placeholder="ページを検索..." onkeyup="handleSearch(this.value)">
+        <input type="text" class="search-input" placeholder="ページを検索..." onkeyup="handleSearch(this.value)" style="width:100%; box-sizing:border-box;">
       </div>
-      <button class="btn-secondary" onclick="triggerImport()" title="Markdownファイルをインポート">📥 Import</button>
+      <button class="btn-secondary" onclick="triggerImport()" title="Markdownファイルをインポート" style="white-space:nowrap;">📥 Import</button>
     </div>
   `;
 
@@ -261,7 +261,7 @@
        
        <!-- Rich Text -->
        <div id="quill-wrapper" class="quill-wrapper ${page.format === 'html' ? 'active' : ''}">
-         <div id="editor-container"></div>
+         <div id="editor-container" style="height:400px; background:white;"></div>
        </div>
        
        <!-- Markdown -->
@@ -276,33 +276,29 @@
 
         showLoader(false);
 
-        // Initialize Quill
-        if (!state.editorInstance) {
-            // Only init once or re-init carefully. Here we create new every time for simplicity in simple SPA
-            var quill = new Quill('#editor-container', {
-                theme: 'snow',
-                modules: {
-                    toolbar: [
-                        [{ 'header': [1, 2, 3, false] }],
-                        ['bold', 'italic', 'underline', 'strike'],
-                        ['blockquote', 'code-block'],
-                        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                        [{ 'color': [] }, { 'background': [] }],
-                        ['clean']
-                    ]
-                }
-            });
-
-            // Set content
-            if (page.format === 'html') {
-                quill.root.innerHTML = page.content;
+        // Always initialize Quill because internal HTML was rewritten
+        // We don't rely on cached instance for DOM connection
+        var quill = new Quill('#editor-container', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    [{ 'header': [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    ['blockquote', 'code-block'],
+                    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                    [{ 'color': [] }, { 'background': [] }],
+                    ['clean']
+                ]
             }
-            state.editorInstance = quill;
+        });
 
-            // Sync logic if needed for switching
-            // Simple state tracking for mode
-            state.editMode = page.format;
+        // Set content
+        if (page.format === 'html') {
+            quill.root.innerHTML = page.content;
         }
+
+        state.editorInstance = quill;
+        state.editMode = page.format;
     }
 
     function setEditorMode(mode) {
