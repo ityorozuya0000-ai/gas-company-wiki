@@ -4,6 +4,7 @@
      */
     const state = {
         pages: [],
+        pageCache: {}, // Memory cache for page details
         currentPage: null,
         route: 'home', // home, view, edit
         params: {},
@@ -82,14 +83,34 @@
     });
 
     async function loadPages() {
-        showLoader(true);
+        // Try to load from LocalStorage first for speed
+        const cached = localStorage.getItem('company_wiki_pages');
+        if (cached) {
+            try {
+                state.pages = JSON.parse(cached);
+                updateSidebarTags();
+                if (state.route === 'home') renderHome();
+            } catch (e) {
+                console.error('Cache parse error', e);
+            }
+        } else {
+            showLoader(true);
+        }
+
         try {
-            state.pages = await api.getPages();
-            updateSidebarTags(); // Update sidebar with tags
-            if (state.route === 'home') renderHome();
+            // Background fetch to ensure freshness
+            const freshPages = await api.getPages();
+
+            // Check if data actually changed to avoid unnecessary re-renders (simple JSON check)
+            if (JSON.stringify(freshPages) !== JSON.stringify(state.pages)) {
+                state.pages = freshPages;
+                localStorage.setItem('company_wiki_pages', JSON.stringify(freshPages));
+                updateSidebarTags();
+                if (state.route === 'home') renderHome();
+            }
         } catch (err) {
             console.error(err);
-            alert('ページの読み込みに失敗しました');
+            if (!cached) alert('ページの読み込みに失敗しました');
         } finally {
             showLoader(false);
         }
@@ -260,6 +281,13 @@
 
     async function renderView(id) {
         const container = document.getElementById('main-container');
+
+        // Check Memory Cache
+        if (state.pageCache[id]) {
+            renderViewContent(state.pageCache[id]);
+            return;
+        }
+
         showLoader(true);
         try {
             const page = await api.getPage(id);
@@ -268,15 +296,27 @@
                 return;
             }
 
-            // Render content
-            let contentHtml = '';
-            if (page.format === 'markdown') {
-                contentHtml = marked.parse(page.content);
-            } else {
-                contentHtml = page.content; // HTML (Quill)
-            }
+            // Store in Cache
+            state.pageCache[id] = page;
+            renderViewContent(page);
+        } catch (err) {
+            container.innerHTML = '<p class="text-red-500">ページの読み込みに失敗しました。</p>';
+        } finally {
+            showLoader(false);
+        }
+    }
 
-            container.innerHTML = `
+    function renderViewContent(page) {
+        const container = document.getElementById('main-container');
+
+        let contentHtml = '';
+        if (page.format === 'markdown') {
+            contentHtml = marked.parse(page.content);
+        } else {
+            contentHtml = page.content;
+        }
+
+        container.innerHTML = `
       <div class="fade-in">
         <div class="page-meta">
            <span>作成日: ${new Date(page.created_at).toLocaleDateString()}</span>
@@ -296,11 +336,6 @@
         <div class="page-content ql-editor" style="padding:0; margin-top:2rem; border-top:1px solid var(--border); padding-top:2rem;">${contentHtml}</div>
       </div>
     `;
-        } catch (err) {
-            container.innerHTML = '<p class="text-red-500">ページの読み込みに失敗しました。</p>';
-        } finally {
-            showLoader(false);
-        }
     }
 
     async function renderEditor(id) {
@@ -553,6 +588,11 @@
                 format: state.editMode,
                 tags
             });
+
+            // Invalidate Caches
+            localStorage.removeItem('company_wiki_pages');
+            if (id && id !== 'new') delete state.pageCache[id];
+
             alert('保存しました！');
             window.location.hash = '#home';
             loadPages(); // Refresh list
