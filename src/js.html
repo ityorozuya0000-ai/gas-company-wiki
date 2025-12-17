@@ -1,0 +1,421 @@
+<script>
+    /**
+     * State Management
+     */
+    const state = {
+        pages: [],
+        currentPage: null,
+        route: 'home', // home, view, edit
+        params: {},
+        editorInstance: null
+    };
+
+    /**
+     * Router & Navigation
+     */
+    function navigate(route, params = {}) {
+        state.route = route;
+        state.params = params;
+        render();
+    }
+
+    function handleHashChange() {
+        const hash = window.location.hash.slice(1); // #view/123 -> view/123
+        if (!hash) {
+            navigate('home');
+            return;
+        }
+
+        const [route, id] = hash.split('/');
+        navigate(route, { id });
+    }
+
+    window.addEventListener('hashchange', handleHashChange);
+
+    /**
+     * API Wrappers
+     */
+    const api = {
+        getPages: () => new Promise((resolve, reject) => {
+            google.script.run
+                .withSuccessHandler(resolve)
+                .withFailureHandler(reject)
+                .apiGetPages();
+        }),
+        getPage: (id) => new Promise((resolve, reject) => {
+            google.script.run
+                .withSuccessHandler(resolve)
+                .withFailureHandler(reject)
+                .apiGetPage(id);
+        }),
+        savePage: (data) => new Promise((resolve, reject) => {
+            google.script.run
+                .withSuccessHandler(resolve)
+                .withFailureHandler(reject)
+                .apiSavePage(data);
+        }),
+        searchPages: (q) => new Promise((resolve, reject) => {
+            google.script.run
+                .withSuccessHandler(resolve)
+                .withFailureHandler(reject)
+                .apiSearchPages(q);
+        }),
+        uploadFile: (fileData) => new Promise((resolve, reject) => {
+            google.script.run
+                .withSuccessHandler(resolve)
+                .withFailureHandler(reject)
+                .apiUploadFile(fileData);
+        })
+    };
+
+    /**
+     * Setup & Initialization
+     */
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Check initial hash
+        handleHashChange();
+
+        // Clean URL hash on load if needed, or trigger initial load
+        if (state.route === 'home') {
+            loadPages();
+        }
+    });
+
+    async function loadPages() {
+        showLoader(true);
+        try {
+            state.pages = await api.getPages();
+            if (state.route === 'home') renderHome();
+        } catch (err) {
+            console.error(err);
+            alert('Failed to load pages');
+        } finally {
+            showLoader(false);
+        }
+    }
+
+    /**
+     * Rendering Logic
+     */
+    function render() {
+        const app = document.getElementById('main-container');
+        app.innerHTML = ''; // Clear
+
+        switch (state.route) {
+            case 'home':
+                renderHome();
+                break;
+            case 'view':
+                renderView(state.params.id);
+                break;
+            case 'edit':
+                renderEditor(state.params.id);
+                break;
+            default:
+                renderHome();
+        }
+    }
+
+    function renderHome() {
+        const container = document.getElementById('main-container');
+
+        // Search Bar
+        const searchHtml = `
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input type="text" class="search-input" placeholder="Search pages..." onkeyup="handleSearch(this.value)">
+    </div>
+  `;
+
+        // Page List
+        const listHtml = `
+    <div id="page-list" class="fade-in">
+      ${state.pages.map(page => `
+        <div class="nav-item" onclick="window.location.hash = '#view/${page.id}'">
+          <div style="flex-grow:1">
+            <div style="font-weight:600; color:var(--text-main)">${page.title}</div>
+            <div style="font-size:0.8rem; color:var(--text-sub)">
+              ${new Date(page.updated_at).toLocaleDateString()} by ${page.author_email}
+            </div>
+          </div>
+          <span class="tag">${page.tags || 'General'}</span>
+        </div>
+      `).join('')}
+      ${state.pages.length === 0 ? '<p style="text-align:center; color:var(--text-sub)">No pages found. Create one!</p>' : ''}
+    </div>
+  `;
+
+        container.innerHTML = `<h1>Knowledge Base</h1>${searchHtml}${listHtml}`;
+    }
+
+    async function handleSearch(query) {
+        // Simple client-side filtering if we have all pages, or server-side
+        // let's do server side for scalability demo
+        try {
+            const results = await api.searchPages(query);
+            state.pages = results;
+            // Re-render list part only ideally, but full re-render is fine for now
+            const listContainer = document.getElementById('page-list');
+            if (!listContainer) return;
+
+            // Quick re-implementation of list rendering
+            listContainer.innerHTML = results.map(page => `
+        <div class="nav-item" onclick="window.location.hash = '#view/${page.id}'">
+          <div style="flex-grow:1">
+            <div style="font-weight:600; color:var(--text-main)">${page.title}</div>
+            <div style="font-size:0.8rem; color:var(--text-sub)">
+              ${new Date(page.updated_at).toLocaleDateString()} by ${page.author_email}
+            </div>
+          </div>
+          <span class="tag">${page.tags || 'General'}</span>
+        </div>
+    `).join('') || '<p style="text-align:center; color:var(--text-sub)">No results.</p>';
+
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function renderView(id) {
+        const container = document.getElementById('main-container');
+        showLoader(true);
+        try {
+            const page = await api.getPage(id);
+            if (!page) {
+                container.innerHTML = '<p>Page not found.</p>';
+                return;
+            }
+
+            // Render content
+            let contentHtml = '';
+            if (page.format === 'markdown') {
+                contentHtml = marked.parse(page.content);
+            } else {
+                contentHtml = page.content; // HTML (Quill)
+            }
+
+            container.innerHTML = `
+      <div class="fade-in">
+        <div class="page-meta">
+           <span>Created: ${new Date(page.created_at).toLocaleDateString()}</span>
+           <span>Author: ${page.author_email}</span>
+           ${page.tags ? `<span class="tag">${page.tags}</span>` : ''}
+        </div>
+        <h1>${page.title}</h1>
+        <div class="page-content ql-editor" style="padding:0;">${contentHtml}</div>
+        
+        <div class="page-actions">
+           <button class="btn-secondary" onclick="window.location.hash = '#edit/${page.id}'">Edit Page</button>
+           <button class="btn-secondary" onclick="window.location.hash = '#home'">Back to Home</button>
+        </div>
+      </div>
+    `;
+        } catch (err) {
+            container.innerHTML = '<p class="text-red-500">Error loading page.</p>';
+        } finally {
+            showLoader(false);
+        }
+    }
+
+    async function renderEditor(id) {
+        const container = document.getElementById('main-container');
+        showLoader(true);
+
+        let page = { title: '', content: '', format: 'html', tags: '' };
+
+        if (id && id !== 'new') {
+            try {
+                page = await api.getPage(id);
+            } catch (e) {
+                alert('Error fetching page for edit');
+                return;
+            }
+        }
+
+        container.innerHTML = `
+    <div class="fade-in">
+       <h1>${id ? 'Edit Page' : 'New Page'}</h1>
+       
+       <div class="input-group">
+         <label class="input-label">Title</label>
+         <input type="text" id="edit-title" class="text-input" value="${page.title}" placeholder="Page Title">
+       </div>
+       
+       <div class="input-group">
+         <label class="input-label">Tags (comma separated)</label>
+         <input type="text" id="edit-tags" class="text-input" value="${page.tags}" placeholder="e.g. HR, Manual, Tech">
+       </div>
+       
+       <div class="editor-toolbar">
+         <label class="input-label" style="margin:0">Format:</label>
+         <div class="mode-switch">
+           <button class="mode-btn ${page.format === 'html' ? 'active' : ''}" onclick="setEditorMode('html')">Rich Text</button>
+           <button class="mode-btn ${page.format === 'markdown' ? 'active' : ''}" onclick="setEditorMode('markdown')">Markdown</button>
+         </div>
+         <span style="flex-grow:1"></span>
+         <button class="btn-secondary" onclick="insertImage()">📷 Insert Image/Video</button>
+       </div>
+       
+       <!-- Rich Text -->
+       <div id="quill-wrapper" class="quill-wrapper ${page.format === 'html' ? 'active' : ''}">
+         <div id="editor-container"></div>
+       </div>
+       
+       <!-- Markdown -->
+       <textarea id="markdown-editor" class="markdown-editor ${page.format === 'markdown' ? 'active' : ''}" placeholder="# Write markdown here...">${page.content}</textarea>
+       
+       <div class="page-actions">
+         <button class="new-page-btn" style="width:auto; margin:0;" onclick="savePage('${id || ''}')">Save Page</button>
+         <button class="btn-secondary" onclick="window.history.back()">Cancel</button>
+       </div>
+    </div>
+  `;
+
+        showLoader(false);
+
+        // Initialize Quill
+        if (!state.editorInstance) {
+            // Only init once or re-init carefully. Here we create new every time for simplicity in simple SPA
+            var quill = new Quill('#editor-container', {
+                theme: 'snow',
+                modules: {
+                    toolbar: [
+                        [{ 'header': [1, 2, 3, false] }],
+                        ['bold', 'italic', 'underline', 'strike'],
+                        ['blockquote', 'code-block'],
+                        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                        [{ 'color': [] }, { 'background': [] }],
+                        ['clean']
+                    ]
+                }
+            });
+
+            // Set content
+            if (page.format === 'html') {
+                quill.root.innerHTML = page.content;
+            }
+            state.editorInstance = quill;
+
+            // Sync logic if needed for switching
+            // Simple state tracking for mode
+            state.editMode = page.format;
+        }
+    }
+
+    function setEditorMode(mode) {
+        state.editMode = mode;
+
+        // UI Update
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        if (mode === 'html') {
+            document.querySelector('.mode-btn:first-child').classList.add('active');
+            document.getElementById('quill-wrapper').classList.add('active');
+            document.getElementById('markdown-editor').classList.remove('active');
+        } else {
+            document.querySelector('.mode-btn:last-child').classList.add('active');
+            document.getElementById('quill-wrapper').classList.remove('active');
+            document.getElementById('markdown-editor').classList.add('active');
+        }
+    }
+
+    function insertImage() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*,video/*'; // Accept video too
+
+        input.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            showLoader(true);
+
+            const reader = new FileReader();
+            reader.onload = async function (evt) {
+                const base64 = evt.target.result.split(',')[1];
+                const data = {
+                    name: file.name,
+                    type: file.type,
+                    base64: base64
+                };
+
+                try {
+                    const result = await api.uploadFile(data);
+
+                    // Insert into editor
+                    if (state.editMode === 'html') {
+                        const range = state.editorInstance.getSelection(true);
+                        if (file.type.startsWith('video')) {
+                            // Video tag for HTML
+                            state.editorInstance.clipboard.dangerouslyPasteHTML(range.index, `<video src="${result.downloadUrl}" controls style="max-width:100%"></video>`);
+                        } else {
+                            // Image
+                            state.editorInstance.insertEmbed(range.index, 'image', result.downloadUrl); // Logic might need proxy for Drive, but try direct download link
+                        }
+                    } else {
+                        const textarea = document.getElementById('markdown-editor');
+                        const insertText = file.type.startsWith('video')
+                            ? `\n<video src="${result.downloadUrl}" controls></video>\n`
+                            : `\n![${file.name}](${result.downloadUrl})\n`;
+                        textarea.value += insertText;
+                    }
+                } catch (err) {
+                    alert('Upload failed: ' + err);
+                } finally {
+                    showLoader(false);
+                }
+            };
+            reader.readAsDataURL(file);
+        };
+
+        input.click();
+    }
+
+    async function savePage(id) {
+        const title = document.getElementById('edit-title').value;
+        const tags = document.getElementById('edit-tags').value;
+
+        let content = '';
+        if (state.editMode === 'html') {
+            content = state.editorInstance.root.innerHTML;
+        } else {
+            content = document.getElementById('markdown-editor').value;
+        }
+
+        if (!title) return alert('Title is required');
+
+        showLoader(true);
+        try {
+            await api.savePage({
+                id: id === 'new' ? null : id,
+                title,
+                content,
+                format: state.editMode,
+                tags
+            });
+            alert('Saved!');
+            window.location.hash = '#home';
+            loadPages(); // Refresh list
+        } catch (e) {
+            alert('Save failed: ' + e);
+        } finally {
+            showLoader(false);
+        }
+    }
+
+    /**
+     * UI Helpers
+     */
+    function showLoader(show) {
+        let loader = document.getElementById('global-loader');
+        if (!loader) {
+            loader = document.createElement('div');
+            loader.id = 'global-loader';
+            loader.className = 'loader-overlay hidden';
+            loader.innerHTML = '<div class="spinner"></div>';
+            document.body.appendChild(loader);
+        }
+
+        if (show) loader.classList.remove('hidden');
+        else loader.classList.add('hidden');
+    }
+</script>
