@@ -85,6 +85,7 @@
         showLoader(true);
         try {
             state.pages = await api.getPages();
+            updateSidebarTags(); // Update sidebar with tags
             if (state.route === 'home') renderHome();
         } catch (err) {
             console.error(err);
@@ -92,6 +93,43 @@
         } finally {
             showLoader(false);
         }
+    }
+
+    function updateSidebarTags() {
+        // Extract all tags
+        const tagCounts = {};
+        state.pages.forEach(p => {
+            if (!p.tags) return;
+            p.tags.split(',').forEach(t => {
+                const tag = t.trim();
+                if (tag) tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+            });
+        });
+
+        // Sort by count
+        const sortedTags = Object.keys(tagCounts).sort((a, b) => tagCounts[b] - tagCounts[a]);
+
+        const nav = document.querySelector('.sidebar nav');
+        if (!nav) return;
+
+        // Keep Home, remove others (if any dynamic ones existed)
+        let tagSection = document.getElementById('sidebar-tags');
+        if (!tagSection) {
+            tagSection = document.createElement('div');
+            tagSection.id = 'sidebar-tags';
+            tagSection.style.marginTop = '2rem';
+            nav.parentNode.insertBefore(tagSection, nav.nextSibling);
+        }
+
+        tagSection.innerHTML = `
+            <div style="font-size:0.85rem; font-weight:600; color:var(--text-sub); margin-bottom:0.5rem;">タグ一覧</div>
+            <div style="display:flex; flex-wrap:wrap; gap:0.5rem;">
+                ${sortedTags.map(tag => `
+                    <span class="tag clickable" onclick="filterByTag('${tag}')">#${tag} (${tagCounts[tag]})</span>
+                `).join('')}
+                ${sortedTags.length === 0 ? '<span style="font-size:0.8rem; color:#9ca3af;">タグなし</span>' : ''}
+            </div>
+        `;
     }
 
     /**
@@ -245,13 +283,17 @@
            <span>作成者: ${page.author_email}</span>
            ${page.tags ? `<span class="tag">${page.tags}</span>` : ''}
         </div>
-        <h1>${page.title}</h1>
-        <div class="page-content ql-editor" style="padding:0;">${contentHtml}</div>
         
-        <div class="page-actions">
-           <button class="btn-secondary" onclick="window.location.hash = '#edit/${page.id}'">編集する</button>
-           <button class="btn-secondary" onclick="window.location.hash = '#home'">ホームに戻る</button>
+        <div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">
+            <h1 style="margin:0;">${page.title}</h1>
+            <div class="page-actions" style="margin:0; padding:0; border:none; gap:0.5rem;">
+               <button class="btn-secondary" onclick="window.location.hash = '#home'">一覧へ</button>
+               <button class="btn-secondary" onclick="exportMarkdown('${page.id}')">Export</button>
+               <button class="btn-secondary" style="background:var(--primary); color:white; border:none;" onclick="window.location.hash = '#edit/${page.id}'">編集</button>
+            </div>
         </div>
+
+        <div class="page-content ql-editor" style="padding:0; margin-top:2rem; border-top:1px solid var(--border); padding-top:2rem;">${contentHtml}</div>
       </div>
     `;
         } catch (err) {
