@@ -164,8 +164,15 @@ function apiUploadFile(fileData) {
   // しかしDriveの画像表示は工夫が必要。setSharingでANYONE_WITH_LINKにするのが確実。
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
   
+  let displayUrl = "https://drive.google.com/uc?export=view&id=" + file.getId();
+  
+  // 画像の場合はサムネイル取得用URLを使用する（ブラウザのクッキー制限を回避するため）
+  if (fileData.type.startsWith('image/')) {
+    displayUrl = "https://drive.google.com/thumbnail?sz=w4096&id=" + file.getId();
+  }
+
   return {
-    url: "https://drive.google.com/uc?export=view&id=" + file.getId(), // 直接表示用リンク
+    url: displayUrl,
     downloadUrl: file.getDownloadUrl(),
     id: file.getId()
   };
