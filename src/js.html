@@ -88,7 +88,7 @@
             if (state.route === 'home') renderHome();
         } catch (err) {
             console.error(err);
-            alert('Failed to load pages');
+            alert('ページの読み込みに失敗しました');
         } finally {
             showLoader(false);
         }
@@ -123,7 +123,7 @@
         const searchHtml = `
     <div class="search-box">
       <span class="search-icon">🔍</span>
-      <input type="text" class="search-input" placeholder="Search pages..." onkeyup="handleSearch(this.value)">
+      <input type="text" class="search-input" placeholder="ページを検索..." onkeyup="handleSearch(this.value)">
     </div>
   `;
 
@@ -135,17 +135,17 @@
           <div style="flex-grow:1">
             <div style="font-weight:600; color:var(--text-main)">${page.title}</div>
             <div style="font-size:0.8rem; color:var(--text-sub)">
-              ${new Date(page.updated_at).toLocaleDateString()} by ${page.author_email}
+              ${new Date(page.updated_at).toLocaleDateString()} 更新者: ${page.author_email}
             </div>
           </div>
-          <span class="tag">${page.tags || 'General'}</span>
+          <span class="tag">${page.tags || '一般'}</span>
         </div>
       `).join('')}
-      ${state.pages.length === 0 ? '<p style="text-align:center; color:var(--text-sub)">No pages found. Create one!</p>' : ''}
+      ${state.pages.length === 0 ? '<p style="text-align:center; color:var(--text-sub)">ページが見つかりません。新規作成してみましょう！</p>' : ''}
     </div>
   `;
 
-        container.innerHTML = `<h1>Knowledge Base</h1>${searchHtml}${listHtml}`;
+        container.innerHTML = `<h1>ナレッジベース</h1>${searchHtml}${listHtml}`;
     }
 
     async function handleSearch(query) {
@@ -164,12 +164,12 @@
           <div style="flex-grow:1">
             <div style="font-weight:600; color:var(--text-main)">${page.title}</div>
             <div style="font-size:0.8rem; color:var(--text-sub)">
-              ${new Date(page.updated_at).toLocaleDateString()} by ${page.author_email}
+              ${new Date(page.updated_at).toLocaleDateString()} 更新者: ${page.author_email}
             </div>
           </div>
-          <span class="tag">${page.tags || 'General'}</span>
+          <span class="tag">${page.tags || '一般'}</span>
         </div>
-    `).join('') || '<p style="text-align:center; color:var(--text-sub)">No results.</p>';
+    `).join('') || '<p style="text-align:center; color:var(--text-sub)">結果なし</p>';
 
         } catch (e) {
             console.error(e);
@@ -182,7 +182,7 @@
         try {
             const page = await api.getPage(id);
             if (!page) {
-                container.innerHTML = '<p>Page not found.</p>';
+                container.innerHTML = '<p>ページが見つかりません。</p>';
                 return;
             }
 
@@ -197,21 +197,21 @@
             container.innerHTML = `
       <div class="fade-in">
         <div class="page-meta">
-           <span>Created: ${new Date(page.created_at).toLocaleDateString()}</span>
-           <span>Author: ${page.author_email}</span>
+           <span>作成日: ${new Date(page.created_at).toLocaleDateString()}</span>
+           <span>作成者: ${page.author_email}</span>
            ${page.tags ? `<span class="tag">${page.tags}</span>` : ''}
         </div>
         <h1>${page.title}</h1>
         <div class="page-content ql-editor" style="padding:0;">${contentHtml}</div>
         
         <div class="page-actions">
-           <button class="btn-secondary" onclick="window.location.hash = '#edit/${page.id}'">Edit Page</button>
-           <button class="btn-secondary" onclick="window.location.hash = '#home'">Back to Home</button>
+           <button class="btn-secondary" onclick="window.location.hash = '#edit/${page.id}'">編集する</button>
+           <button class="btn-secondary" onclick="window.location.hash = '#home'">ホームに戻る</button>
         </div>
       </div>
     `;
         } catch (err) {
-            container.innerHTML = '<p class="text-red-500">Error loading page.</p>';
+            container.innerHTML = '<p class="text-red-500">ページの読み込みに失敗しました。</p>';
         } finally {
             showLoader(false);
         }
@@ -227,33 +227,33 @@
             try {
                 page = await api.getPage(id);
             } catch (e) {
-                alert('Error fetching page for edit');
+                alert('編集するページの取得に失敗しました');
                 return;
             }
         }
 
         container.innerHTML = `
     <div class="fade-in">
-       <h1>${id ? 'Edit Page' : 'New Page'}</h1>
+       <h1>${id ? 'ページ編集' : '新規ページ作成'}</h1>
        
        <div class="input-group">
-         <label class="input-label">Title</label>
-         <input type="text" id="edit-title" class="text-input" value="${page.title}" placeholder="Page Title">
+         <label class="input-label">タイトル</label>
+         <input type="text" id="edit-title" class="text-input" value="${page.title}" placeholder="ページタイトルを入力">
        </div>
        
        <div class="input-group">
-         <label class="input-label">Tags (comma separated)</label>
-         <input type="text" id="edit-tags" class="text-input" value="${page.tags}" placeholder="e.g. HR, Manual, Tech">
+         <label class="input-label">タグ (カンマ区切り)</label>
+         <input type="text" id="edit-tags" class="text-input" value="${page.tags}" placeholder="例: 人事, マニュアル, 技術">
        </div>
        
        <div class="editor-toolbar">
-         <label class="input-label" style="margin:0">Format:</label>
+         <label class="input-label" style="margin:0">形式:</label>
          <div class="mode-switch">
-           <button class="mode-btn ${page.format === 'html' ? 'active' : ''}" onclick="setEditorMode('html')">Rich Text</button>
-           <button class="mode-btn ${page.format === 'markdown' ? 'active' : ''}" onclick="setEditorMode('markdown')">Markdown</button>
+           <button class="mode-btn ${page.format === 'html' ? 'active' : ''}" onclick="setEditorMode('html')">リッチテキスト</button>
+           <button class="mode-btn ${page.format === 'markdown' ? 'active' : ''}" onclick="setEditorMode('markdown')">Markdown (MD)</button>
          </div>
          <span style="flex-grow:1"></span>
-         <button class="btn-secondary" onclick="insertImage()">📷 Insert Image/Video</button>
+         <button class="btn-secondary" onclick="insertImage()">📷 画像/動画を挿入</button>
        </div>
        
        <!-- Rich Text -->
@@ -262,11 +262,11 @@
        </div>
        
        <!-- Markdown -->
-       <textarea id="markdown-editor" class="markdown-editor ${page.format === 'markdown' ? 'active' : ''}" placeholder="# Write markdown here...">${page.content}</textarea>
+       <textarea id="markdown-editor" class="markdown-editor ${page.format === 'markdown' ? 'active' : ''}" placeholder="# ここにMarkdownを入力...">${page.content}</textarea>
        
        <div class="page-actions">
-         <button class="new-page-btn" style="width:auto; margin:0;" onclick="savePage('${id || ''}')">Save Page</button>
-         <button class="btn-secondary" onclick="window.history.back()">Cancel</button>
+         <button class="new-page-btn" style="width:auto; margin:0;" onclick="savePage('${id || ''}')">保存する</button>
+         <button class="btn-secondary" onclick="window.history.back()">キャンセル</button>
        </div>
     </div>
   `;
@@ -359,7 +359,7 @@
                         textarea.value += insertText;
                     }
                 } catch (err) {
-                    alert('Upload failed: ' + err);
+                    alert('アップロードに失敗しました: ' + err);
                 } finally {
                     showLoader(false);
                 }
@@ -381,7 +381,7 @@
             content = document.getElementById('markdown-editor').value;
         }
 
-        if (!title) return alert('Title is required');
+        if (!title) return alert('タイトルは必須です');
 
         showLoader(true);
         try {
@@ -392,11 +392,11 @@
                 format: state.editMode,
                 tags
             });
-            alert('Saved!');
+            alert('保存しました！');
             window.location.hash = '#home';
             loadPages(); // Refresh list
         } catch (e) {
-            alert('Save failed: ' + e);
+            alert('保存に失敗しました: ' + e);
         } finally {
             showLoader(false);
         }

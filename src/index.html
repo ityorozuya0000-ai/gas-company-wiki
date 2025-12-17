@@ -14,7 +14,7 @@
 <body>
   <!-- Mobile Header -->
   <div class="mobile-header">
-    <div class="app-title" style="margin:0; font-size:1.2rem;">Company Wiki</div>
+    <div class="app-title" style="margin:0; font-size:1.2rem;">社内Wiki</div>
     <button onclick="document.querySelector('.sidebar').style.display='block'"
       style="border:none; background:none;">☰</button>
   </div>
@@ -22,19 +22,19 @@
   <div class="app-container">
     <!-- Sidebar -->
     <aside class="sidebar">
-      <div class="app-title" onclick="window.location.hash='#home'">Company Wiki</div>
+      <div class="app-title" onclick="window.location.hash='#home'">社内Wiki</div>
 
-      <button class="new-page-btn" onclick="window.location.hash='#edit/new'">+ New Page</button>
+      <button class="new-page-btn" onclick="window.location.hash='#edit/new'">+ 新規ページ作成</button>
 
       <nav>
         <div class="nav-item active" onclick="window.location.hash='#home'">
-          <span>🏠 Home</span>
+          <span>🏠 ホーム</span>
         </div>
         <!-- Future: Categories or Recent -->
       </nav>
 
       <div style="margin-top:2rem; font-size:0.8rem; color:var(--text-sub);">
-        Logged in as:<br>
+        ログイン中:<br>
         <?= Session.getActiveUser().getEmail() ?>
       </div>
     </aside>

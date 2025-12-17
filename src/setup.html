@@ -87,26 +87,26 @@
 
 <body>
     <div class="card">
-        <h1>Welcome to Wiki Setup</h1>
-        <p>Enter the IDs of your Google Sheet and Drive Folder to connect the application.</p>
+        <h1>社内Wiki セットアップ</h1>
+        <p>アプリケーションを接続するために、GoogleスプレッドシートとドライブフォルダのIDを入力してください。</p>
 
         <form id="setupForm" onsubmit="handleSubmit(event)">
             <div class="input-group">
-                <label>Google Sheet ID</label>
-                <input type="text" name="sheetId" required placeholder="e.g. 1a2B3... or URL">
+                <label>スプレッドシートID</label>
+                <input type="text" name="sheetId" required placeholder="例: 1a2B3... または URL">
             </div>
 
             <div class="input-group">
-                <label>Drive Assets Folder ID</label>
-                <input type="text" name="folderId" required placeholder="e.g. 1xY9z... or URL">
+                <label>画像保存用フォルダID</label>
+                <input type="text" name="folderId" required placeholder="例: 1xY9z... または URL">
             </div>
 
             <div class="input-group">
-                <label>Application Name</label>
-                <input type="text" name="appName" value="Company Wiki" placeholder="Checking...">
+                <label>アプリ名</label>
+                <input type="text" name="appName" value="Company Wiki" placeholder="確認中...">
             </div>
 
-            <button type="submit" id="submitBtn">Save & Initialize</button>
+            <button type="submit" id="submitBtn">設定を保存して初期化</button>
             <div id="errorMsg" class="error"></div>
         </form>
     </div>
@@ -117,7 +117,7 @@
             const btn = document.getElementById('submitBtn');
             const err = document.getElementById('errorMsg');
             btn.disabled = true;
-            btn.textContent = 'Saving...';
+            btn.textContent = '保存中...';
             err.style.display = 'none';
 
             const formData = {
@@ -129,10 +129,10 @@
             google.script.run
                 .withSuccessHandler(res => {
                     if (res.success) {
-                        alert('Setup Complete! Reloading...');
+                        alert('セットアップ完了！リロードします...');
                         window.top.location.reload();
                     } else {
-                        showError('Error: ' + res.error);
+                        showError('エラー: ' + res.error);
                     }
                 })
                 .withFailureHandler(e => showError(e))
@@ -145,7 +145,7 @@
             err.textContent = msg;
             err.style.display = 'block';
             btn.disabled = false;
-            btn.textContent = 'Save & Initialize';
+            btn.textContent = '設定を保存して初期化';
         }
 
         function cleanId(input) {
