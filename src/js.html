@@ -410,6 +410,85 @@
         input.click();
     }
 
+    // --- Import / Export Functions ---
+
+    function triggerImport() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.md,.markdown,.txt';
+        input.onchange = (e) => handleImport(e.target.files[0]);
+        input.click();
+    }
+
+    function handleImport(file) {
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const content = e.target.result;
+            // Simple parsing: Title is filename (without ext) or first h1
+            let title = file.name.replace(/\.[^/.]+$/, "");
+            let body = content;
+
+            // Try to extract title from # Title
+            const titleMatch = content.match(/^#\s+(.+)$/m);
+            if (titleMatch) {
+                title = titleMatch[1];
+            }
+
+            if (!confirm(`「${title}」としてインポートしますか？`)) return;
+
+            showLoader(true);
+            try {
+                await api.savePage({
+                    id: null,
+                    title: title,
+                    content: body,
+                    format: 'markdown', // Always markdown for import
+                    tags: 'Imported'
+                });
+                alert('インポートしました！');
+                loadPages();
+            } catch (err) {
+                alert('インポート失敗: ' + err);
+            } finally {
+                showLoader(false);
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    async function exportMarkdown(id) {
+        showLoader(true);
+        try {
+            const page = await api.getPage(id);
+            if (!page) throw new Error('Page not found');
+
+            let content = page.content;
+
+            if (page.format === 'html') {
+                if (!confirm('このページはリッチテキスト(HTML)です。HTMLのままエクスポートしますか？\n(Markdownファイルとして保存されますが、中身はHTMLタグを含みます)')) {
+                    return;
+                }
+            }
+
+            const blob = new Blob([content], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${page.title}.md`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+        } catch (e) {
+            alert('エクスポート失敗: ' + e);
+        } finally {
+            showLoader(false);
+        }
+    }
+
     async function savePage(id) {
         const title = document.getElementById('edit-title').value;
         const tags = document.getElementById('edit-tags').value;
